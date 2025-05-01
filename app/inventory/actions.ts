@@ -19,6 +19,13 @@ export async function createItem(formdata: FormData) {
 
 export async function createCategory(formdata: FormData) {
 	const name = formdata.get("name") as string;
-	revalidatePath('/inventory');
+	revalidatePath("/inventory");
 	return await CategoryService.create(name);
+}
+
+export async function deleteItem(formdata: FormData) {
+	const id = formdata.get("id") as string;
+	const result = await ItemService.delete(+id);
+	revalidatePath("/inventory"); 
+	return result;
 }

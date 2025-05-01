@@ -1,15 +1,16 @@
-import { PrismaClient } from "@/prisma/generated";
 import { Prisma } from "@/prisma/generated";
 import { isNumeric } from "validator";
-const prisma = new PrismaClient();
+import prisma from "../prisma/prisma";
 
 export default class ItemService {
 	static async findAll() {
 		try {
-			return await prisma.item.findMany({ select: {id: true, name: true, Category: true, categoryId: true } });
+			return await prisma.item.findMany({ select: { id: true, name: true, Category: true, categoryId: true } });
 		} catch (error) {
 			console.error(error);
 			throw error;
+		} finally {
+			if (process.env.IS_SERVERLESS) await prisma.$disconnect();
 		}
 	}
 
@@ -19,6 +20,8 @@ export default class ItemService {
 		} catch (error) {
 			console.error(error);
 			throw error;
+		} finally {
+			if (process.env.IS_SERVERLESS) await prisma.$disconnect();
 		}
 	}
 
@@ -39,9 +42,23 @@ export default class ItemService {
 				return { status: "fail", message: error.message };
 			}
 			if (error instanceof Prisma.PrismaClientKnownRequestError) {
+				if (error.code === "P2002") return { status: "fail", message: "Cannot create item - an item by the same name already exists" };
+
 				return { status: "fail", message: "Cannot find category by provided ID" };
 			}
 
+			return { status: "fail", message: "An internal server error has occurred" };
+		} finally {
+			if (process.env.IS_SERVERLESS) await prisma.$disconnect();
+		}
+	}
+
+	static async delete(id: number) {
+		try {
+			await prisma.item.delete({ where: { id: id } });
+			return { status: "success", message: "Successfully deleted item" };
+		} catch (error) {
+			console.error(error);
 			return { status: "fail", message: "An internal server error has occurred" };
 		}
 	}
